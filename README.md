@@ -2,15 +2,6 @@
 
 My solutions to [Danny Ma's 8 Week SQL Challenge](https://8weeksqlchallenge.com/), written in PostgreSQL.
 
-## 📂 Structure
-
-```
-.
-├── case-study-1-dannys-diner/
-│   └── solutions.sql
-├── case-study-2-pizza-runner/
-│   └── solutions.sql
-└── ...
 ```
 
 ## 🛠️ Tech Stack
