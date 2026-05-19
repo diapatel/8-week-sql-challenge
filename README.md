@@ -2,8 +2,6 @@
 
 My solutions to [Danny Ma's 8 Week SQL Challenge](https://8weeksqlchallenge.com/), written in PostgreSQL.
 
-```
-
 ## 🛠️ Tech Stack
 
 - **PostgreSQL** — all queries written and tested in PostgreSQL
