@@ -58,7 +58,7 @@ VALUES
 -- Case study questions
 --------------------------------------------------------
 
-select * from menu;
+select * from members;
 
 -- 1. total amount each customer spent at the restaurant?
 select customer_id, sum(price)
@@ -69,7 +69,7 @@ group by customer_id
 order by customer_id;
 
 
--- 2. how many days has each customer visited hte restuarant?
+-- 2. how many days has each customer visited the restuarant?
 select customer_id,  count(distinct order_date) as num_days_visited
 from sales
 group by customer_id
@@ -87,27 +87,18 @@ on t1.product_id = m.product_id
 where rnk=1
 order by customer_id;
 
+
 -- 4. most purchased item on the menu and how many times was ti purchased by each customer
-with fav_item as (select m.product_name
+-- using cte here and not just limit 1 because what if multiple items had the same freq and that was the max freq
+with freq as (select s.product_id, count(*) as order_freq
 from sales s
-join menu m
-on s.product_id = m.product_id
-group by s.product_id, m.product_name
-order by count(*) desc
-limit 1)
+group by s.product_id)
+select m.product_name, order_freq
+from freq f
+join menu m on f.product_id = m.product_id 
+where order_freq = (select max(order_freq) from freq);
 
-select s.customer_id, count(*) as num_times_ordered
-from sales s
-join menu m
-on s.product_id = m.product_id 
-where m.product_name = (select * from fav_item)
-group by s.customer_id 
-order by s.customer_id;
-
-
-
-
--- 5. whic item was most popular for each customer
+-- 5. which item was most popular for each customer
 with item_order_count_cte as (select customer_id, product_id, count(*) order_frequency
 from sales
 group by customer_id, product_id
@@ -146,38 +137,83 @@ where rnk=1
 order by c.customer_id;
 
 
--- 8. whaqt is the total items and amount spent for each member before they became a member?
-select s.customer_id, count(*) as num_items, sum(price) as total_spent
+
+-- 7. which item was purchased just before the customer became a member?
+with ranked as (select s.customer_id, s.product_id,
+dense_rank() over(partition by s.customer_id order by s.order_date desc) as rnk
 from sales s
-join members m
-on s.customer_id  = m.customer_id
-join menu mn
-on s.product_id = mn.product_id 
-where s.order_date < m.join_date
+join members m on s.customer_id = m.customer_id 
+where s.order_date < m.join_date)
+
+select r.customer_id, m.product_name
+from ranked r
+join menu m on r.product_id = m.product_id 
+where rnk=1
+order by r.customer_id;
+
+
+-- 8. what is the ttoal items and amoutn spent for each member before they became a member?
+select s.customer_id, count(*), sum(m.price)
+from sales s 
+join members mb on s.customer_id = mb.customer_id 
+join menu m on s.product_id = m.product_id 
+where s.order_date < mb.join_date
 group by s.customer_id
 order by s.customer_id;
 
--- 9. - 860 points for A 
+
+-- 9. if each $1 spent equates to 10 points and sushi has a 2x multiplier, find total points for each customer
 select s.customer_id,
-sum(case when m.product_name = 'sushi' then m.price * 2 *10 else m.price*10 end) 
+sum(case when m.product_name='sushi' then m.price * 2* 10 else m.price*10 end) as points
 from sales s
-join menu m
-on s.product_id = m.product_id 
-group by s.customer_id
-order by s.customer_id ;
+join menu m on s.product_id = m.product_id
+group by s.customer_id 
+order by s.customer_id;
 
 
--- 10.
-select s.customer_id,
-sum(case when s.order_date between join_date and join_date+6 then price * 2 * 10
-		 when mn.product_name='sushi' 
-		 	then price*2*10 
-		 else price*10 
-	end) as points
+-- 10. if a customer orders within one week of their join date, they get a 2x multiplier points on all the items they order, not just sushi
+-- find the total points for each customer for orders before january 31 
+select s.customer_id ,
+sum(case when s.order_date between mb.join_date and mb.join_date + interval '6 days'
+			then m.price * 2* 10
+		when m.product_name='sushi' then m.price * 2* 10
+		else m.price * 10 end)
+	 as points
 from sales s
-join members m
-on s.customer_id = m.customer_id
-join menu mn
-on s.product_id = mn.product_id 
-where s.order_date <='2021-01-31'
-group by s.customer_id;
+join menu m on s.product_id = m.product_id 
+join members mb on s.customer_id = mb.customer_id 
+where s.order_date <= '2021-01-31'
+group by s.customer_id 
+order by s.customer_id;
+
+
+--------------------------------------------------------------------------------------------------------------------------
+-- list of all questions
+-- 1. what is the total amount spent by each customer
+-- 2. hwo many days has each custmer visited?
+-- 3. what was teh first item on the menu purchased by each customer?
+-- 4. most frequently purchased item on the menu and how many times was it purchased?
+-- 5. which item was most popular for each customer?
+-- 6. which item was purchased first by the customer after they became a member?
+-- 7.which item was purchased just before the customer became a member?
+-- 8. what is the ttoal items and amoutn spent for each member before they became a member?
+-- 9. if each $1 spent equates to 10 points and sushi has a 2x multiplier, find total points for each customer
+-- 10. if a customer orders within one week of their join date, they get a 2x multiplier points on all the items they order, not just sushi
+-- find the total points for each customer for orders before january 31 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
